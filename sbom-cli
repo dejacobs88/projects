@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Thin launcher: builds the jar on first run, then forwards all args.
+set -e
+DIR="$(cd "$(dirname "$0")" && pwd)"
+JAR="$DIR/target/sbom-cli.jar"
+if [ ! -f "$JAR" ]; then
+  (cd "$DIR" && mvn -q -DskipTests package)
+fi
+exec java -jar "$JAR" "$@"
