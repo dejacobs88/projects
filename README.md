@@ -23,7 +23,8 @@ This compiles the code, runs the tests, and produces one self-contained runnable
 `./sbom-cli` is a thin wrapper around `java -jar target/sbom-cli.jar` (it also runs the build if the jar doesn't exist yet). Either form works:
 
 ```bash
-./sbom-cli ingest samples/*.json
+./sbom-cli ingest samples/*.json                           # one or many files; bad files are reported and skipped
+./sbom-cli list                                            # every ingested SBOM with component count
 ./sbom-cli query --component log4j-core
 ./sbom-cli query --component log4j-core --version 2.14.1
 ./sbom-cli query --license MIT

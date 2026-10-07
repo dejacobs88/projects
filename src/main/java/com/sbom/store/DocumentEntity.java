@@ -8,6 +8,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 
+import com.sbom.model.DocumentSummary;
 import com.sbom.model.SbomDocument;
 
 import java.time.Instant;
@@ -55,6 +56,10 @@ public class DocumentEntity {
                 .map(ComponentEntity::from)
                 .forEach(entity::addComponent);
         return entity;
+    }
+
+    public DocumentSummary toSummary() {
+        return new DocumentSummary(name, serialNumber, sourceFile, components.size(), ingestedAt);
     }
 
     public void addComponent(ComponentEntity component) {

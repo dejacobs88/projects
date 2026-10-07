@@ -1,5 +1,6 @@
 package com.sbom;
 
+import com.sbom.model.DocumentSummary;
 import com.sbom.model.QueryResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -81,5 +82,13 @@ class SbomServiceTest {
     @Test
     void rejectsMissingFile() {
         assertThrows(IllegalArgumentException.class, () -> sboms.ingest(Path.of("nope.json")));
+    }
+
+    @Test
+    void listsAllDocumentsSortedByName() {
+        List<DocumentSummary> docs = sboms.listDocuments();
+        assertEquals(List.of("cyclone1_6.json", "payments-service", "web-frontend"),
+                docs.stream().map(DocumentSummary::name).toList());
+        assertEquals(5, docs.get(1).componentCount()); // includes the nested snakeyaml
     }
 }

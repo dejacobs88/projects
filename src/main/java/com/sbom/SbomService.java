@@ -1,5 +1,6 @@
 package com.sbom;
 
+import com.sbom.model.DocumentSummary;
 import com.sbom.model.QueryResult;
 import com.sbom.model.SbomDocument;
 import com.sbom.parser.SbomReader;
@@ -55,6 +56,12 @@ public class SbomService {
     @Transactional(readOnly = true)
     public List<QueryResult> findByLicense(String license) {
         return toResults(components.findByLicensesIgnoreCase(license, RESULT_ORDER));
+    }
+
+    /** Lists every ingested SBOM, alphabetically by name. */
+    @Transactional(readOnly = true)
+    public List<DocumentSummary> listDocuments() {
+        return documents.findAll(Sort.by("name")).stream().map(DocumentEntity::toSummary).toList();
     }
 
     private static List<QueryResult> toResults(List<ComponentEntity> found) {

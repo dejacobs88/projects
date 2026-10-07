@@ -1,13 +1,15 @@
 package com.sbom;
 
+import com.sbom.model.DocumentSummary;
 import com.sbom.model.QueryResult;
 import com.sbom.model.SbomDocument;
-
+import com.sbom.util.TablePrinter;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 
 import java.nio.file.Path;
+import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,6 +23,7 @@ public class Main {
               sbom-cli ingest <sbom-file> [<sbom-file> ...]
               sbom-cli query --component <name> [--version <version>]
               sbom-cli query --license <license>
+              sbom-cli list
 
             Database: ./sbom.mv.db (override the path, without extension, with the SBOM_DB env var)""";
 
@@ -28,31 +31,46 @@ public class Main {
         if (args.length == 0) {
             exit(USAGE);
         }
+        int status;
         // CLI args are ours, not Spring's, so don't pass them to SpringApplication.
         try (ConfigurableApplicationContext spring = SpringApplication.run(Main.class)) {
             SbomService sboms = spring.getBean(SbomService.class);
-            switch (args[0]) {
+            status = switch (args[0]) {
                 case "ingest" -> ingest(sboms, args);
                 case "query" -> query(sboms, args);
-                default -> exit("Unknown command: " + args[0] + "\n\n" + USAGE);
-            }
+                case "list" -> list(sboms);
+                default -> fail("Unknown command: " + args[0] + "\n\n" + USAGE);
+            };
         } catch (Exception e) {
-            exit("Error: " + e.getMessage());
+            status = fail("Error: " + e.getMessage());
         }
+        System.exit(status);
     }
 
-    private static void ingest(SbomService sboms, String[] args) throws Exception {
+    /** Ingests each file independently: one bad file is reported and skipped, the rest still load. */
+    private static int ingest(SbomService sboms, String[] args) {
         if (args.length < 2) {
-            exit(USAGE);
+            return fail(USAGE);
         }
+        int failed = 0;
         for (int i = 1; i < args.length; i++) {
-            SbomDocument doc = sboms.ingest(Path.of(args[i]));
-            System.out.printf("Ingested '%s' (%d components) from %s%n",
-                    doc.name(), doc.components().size(), args[i]);
+            try {
+                SbomDocument doc = sboms.ingest(Path.of(args[i]));
+                System.out.printf("Ingested '%s' (%d components) from %s%n",
+                        doc.name(), doc.components().size(), args[i]);
+            } catch (Exception e) {
+                failed++;
+                System.err.printf("Failed %s: %s%n", args[i], e.getMessage());
+            }
         }
+        int total = args.length - 1;
+        if (total > 1) {
+            System.out.printf("%nIngested %d of %d file(s)%n", total - failed, total);
+        }
+        return failed == 0 ? 0 : 1;
     }
 
-    private static void query(SbomService sboms, String[] args) {
+    private static int query(SbomService sboms, String[] args) {
         Map<String, String> flags = parseFlags(args);
         String component = flags.get("--component");
         String license = flags.get("--license");
@@ -63,10 +81,25 @@ public class Main {
         } else if (license != null && component == null && !flags.containsKey("--version")) {
             results = sboms.findByLicense(license);
         } else {
-            exit("Specify exactly one of --component or --license.\n\n" + USAGE);
-            return;
+            return fail("Specify exactly one of --component or --license.\n\n" + USAGE);
         }
-        print(results);
+        printTable(List.of("DOCUMENT", "COMPONENT", "VERSION", "LICENSES"),
+                results.stream()
+                        .map(r -> List.of(r.documentName(), r.componentName(), str(r.version()), str(r.licenses())))
+                        .toList(),
+                "match(es)");
+        return 0;
+    }
+
+    private static int list(SbomService sboms) {
+        List<DocumentSummary> docs = sboms.listDocuments();
+        printTable(List.of("DOCUMENT", "COMPONENTS", "INGESTED", "SOURCE"),
+                docs.stream()
+                        .map(d -> List.of(d.name(), String.valueOf(d.componentCount()),
+                                str(d.ingestedAt().truncatedTo(ChronoUnit.SECONDS)), str(d.sourceFile())))
+                        .toList(),
+                "document(s)");
+        return 0;
     }
 
     /** Parses "--key value" pairs after the subcommand. */
@@ -74,48 +107,33 @@ public class Main {
         Map<String, String> flags = new HashMap<>();
         for (int i = 1; i < args.length; i += 2) {
             if (!args[i].startsWith("--") || i + 1 >= args.length) {
-                exit("Invalid arguments.\n\n" + USAGE);
+                System.exit(fail("Invalid arguments.\n\n" + USAGE));
             }
             flags.put(args[i], args[i + 1]);
         }
         return flags;
     }
 
-    private static void print(List<QueryResult> results) {
-        if (results.isEmpty()) {
-            System.out.println("No matches.");
+    private static void printTable(List<String> header, List<List<String>> rows, String noun) {
+        if (rows.isEmpty()) {
+            System.out.println("No results.");
             return;
         }
-        String[] header = {"DOCUMENT", "COMPONENT", "VERSION", "LICENSES"};
-        int[] w = new int[header.length];
-        for (int i = 0; i < header.length; i++) {
-            w[i] = header[i].length();
-        }
-        for (QueryResult r : results) {
-            String[] row = cells(r);
-            for (int i = 0; i < row.length; i++) {
-                w[i] = Math.max(w[i], row[i].length());
-            }
-        }
-        String fmt = "%-" + w[0] + "s  %-" + w[1] + "s  %-" + w[2] + "s  %s%n";
-        System.out.printf(fmt, (Object[]) header);
-        for (QueryResult r : results) {
-            System.out.printf(fmt, (Object[]) cells(r));
-        }
-        System.out.printf("%n%d match(es)%n", results.size());
+        TablePrinter.print(header, rows);
+        System.out.printf("%n%d %s%n", rows.size(), noun);
     }
 
-    private static String[] cells(QueryResult r) {
-        return new String[] {
-                r.documentName(), r.componentName(), orDash(r.version()), orDash(r.licenses())};
+    /** List.of rejects nulls, so missing values are rendered as "-" here. */
+    private static String str(Object value) {
+        return value == null ? "-" : value.toString();
     }
 
-    private static String orDash(String s) {
-        return s == null ? "-" : s;
+    private static int fail(String message) {
+        System.err.println(message);
+        return 1;
     }
 
     private static void exit(String message) {
-        System.err.println(message);
-        System.exit(1);
+        System.exit(fail(message));
     }
 }
