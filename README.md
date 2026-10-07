@@ -34,6 +34,12 @@ java -jar target/sbom-cli.jar query --license MIT          # same thing, without
 SBOM_DB=/tmp/other ./sbom-cli query --license MIT          # use a different database file (/tmp/other.mv.db)
 ```
 
+## Sample data
+
+`samples/` contains:
+- **`sbom-cli.cdx.json` and `legacy-service.cdx.json`**: real SBOMs generated with the official [CycloneDX Maven plugin](https://github.com/CycloneDX/cyclonedx-maven-plugin). One is for this project (Spring Boot 4). The other is for a legacy service on Spring Boot 3.2 with older pinned libraries, including the Log4Shell-vulnerable `log4j-core 2.14.1`. Together they have 131 components, many shared at different versions (`hibernate-core`, `spring-core`, `jackson-databind` and others), and a realistic license mix: Apache-2.0, MIT, BSD-3/4-Clause, EPL-1.0/2.0, LGPL-2.1, MPL-2.0, GPL-2.0-with-classpath-exception, plus non-SPDX names like `EPL 1.0`.
+- **Small hand-written SBOMs** covering edge cases: nested components, multiple licenses on one component, a license `expression`, and a file with no `serialNumber` or `metadata.component`.
+
 Example output:
 ```
 DOCUMENT          COMPONENT   VERSION  LICENSES
