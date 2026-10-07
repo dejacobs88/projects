@@ -113,6 +113,26 @@ class SbomServiceTest {
     }
 
     @Test
+    void printsRawDocumentByNameOrSerial() throws Exception {
+        String expected = Files.readString(PAYMENTS);
+        assertEquals(expected, sboms.rawDocument("payments-service"));
+        assertEquals(expected, sboms.rawDocument("PAYMENTS-SERVICE")); // case-insensitive
+        assertEquals(expected, sboms.rawDocument("urn:uuid:3e671687-395b-41f5-a30f-a58921a69b79"));
+        assertThrows(IllegalArgumentException.class, () -> sboms.rawDocument("no-such-doc"));
+    }
+
+    @Test
+    void ambiguousNameMustUseSerial() throws Exception {
+        Path other = tmp.resolve("other-payments.json");
+        Files.writeString(other, Files.readString(PAYMENTS).replace("3e671687", "aaaaaaaa"));
+        sboms.ingest(other);
+
+        var e = assertThrows(IllegalArgumentException.class, () -> sboms.rawDocument("payments-service"));
+        assertTrue(e.getMessage().contains("use a serial number"));
+        assertTrue(sboms.rawDocument("urn:uuid:aaaaaaaa-395b-41f5-a30f-a58921a69b79").contains("aaaaaaaa"));
+    }
+
+    @Test
     void identicalReIngestIsUnchanged() {
         assertEquals(Outcome.UNCHANGED, sboms.ingest(PAYMENTS).outcome());
     }

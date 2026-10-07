@@ -70,6 +70,29 @@ public class SbomService {
         return timed("license=" + license, () -> components.findByLicense(license, RESULT_ORDER));
     }
 
+    /**
+     * Returns the stored raw JSON of one document, exactly as ingested.
+     * Accepts a serial number or a document name (case-insensitive). Names aren't unique, so a name
+     * matching several documents is rejected with their serial numbers rather than picking one.
+     */
+    @Transactional(readOnly = true)
+    public String rawDocument(String nameOrSerial) {
+        DocumentEntity doc = documents.findBySerialNumber(nameOrSerial).orElseGet(() -> {
+            List<DocumentEntity> byName = documents.findByName(nameOrSerial);
+            if (byName.isEmpty()) {
+                throw new IllegalArgumentException("No document named or with serial number '" + nameOrSerial + "'");
+            }
+            if (byName.size() > 1) {
+                throw new IllegalArgumentException(byName.size() + " documents are named '" + nameOrSerial
+                        + "'; use a serial number instead: "
+                        + byName.stream().map(DocumentEntity::getSerialNumber).toList());
+            }
+            return byName.get(0);
+        });
+        log.info("Printing '%s' (serial %s)", doc.getName(), doc.getSerialNumber());
+        return doc.getRawJson();
+    }
+
     /** Lists every ingested SBOM, alphabetically by name. */
     @Transactional(readOnly = true)
     public List<DocumentSummary> listDocuments() {

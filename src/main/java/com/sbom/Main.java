@@ -29,6 +29,7 @@ public class Main {
               sbom-cli query -c|--component <name> [--version <version>]
               sbom-cli query -l|--license <license>
               sbom-cli list
+              sbom-cli print <document-name-or-serial>     (also -p / --print; prints the stored raw JSON)
 
             Options:
               -v, --verbose   log progress details (to stderr)
@@ -61,6 +62,7 @@ public class Main {
                 case "ingest" -> ingest(sboms, log, args);
                 case "query" -> query(sboms, args);
                 case "list" -> list(sboms);
+                case "print", "-p", "--print" -> print(sboms, args);
                 default -> fail("Unknown command: " + args[0] + "\n\n" + USAGE);
             };
         } catch (Exception e) {
@@ -126,6 +128,15 @@ public class Main {
                         .map(r -> List.of(r.documentName(), r.componentName(), str(r.version()), str(r.licenses())))
                         .toList(),
                 "match(es)");
+        return 0;
+    }
+
+    /** Prints a stored SBOM verbatim to stdout, so it can be piped (e.g. to jq) or saved to a file. */
+    private static int print(SbomService sboms, String[] args) {
+        if (args.length != 2) {
+            return fail("Usage: sbom-cli print <document-name-or-serial>");
+        }
+        System.out.print(sboms.rawDocument(args[1]));
         return 0;
     }
 
