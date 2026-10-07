@@ -1,6 +1,5 @@
 package com.sbom.parser;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.sbom.model.Component;
 import com.sbom.model.SbomDocument;
 import com.sbom.model.SbomSource;
@@ -12,6 +11,7 @@ import com.sbom.util.Logger;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /** Parses CycloneDX JSON (1.4–1.6): binds it to {@link CycloneDxBom}, then maps to the common model. */
@@ -25,12 +25,12 @@ public class CycloneDxParser implements SbomParser {
     }
 
     @Override
-    public boolean supports(JsonNode root) {
-        return "CycloneDX".equals(root.path("bomFormat").asText());
+    public boolean supports(Map<String, Object> root) {
+        return "CycloneDX".equals(root.get("bomFormat"));
     }
 
     @Override
-    public SbomDocument parse(JsonNode root, SbomSource source) {
+    public SbomDocument parse(Map<String, Object> root, SbomSource source) {
         CycloneDxBom bom = JsonUtil.convert(root, CycloneDxBom.class);
 
         String name;

@@ -1,8 +1,9 @@
 package com.sbom.parser;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.sbom.model.SbomDocument;
 import com.sbom.model.SbomSource;
+
+import java.util.Map;
 
 /**
  * Converts one SBOM format into the common {@link SbomDocument} model.
@@ -11,8 +12,8 @@ import com.sbom.model.SbomSource;
 public interface SbomParser {
 
     /** True if this parser understands the given JSON (e.g. bomFormat == "CycloneDX"). */
-    boolean supports(JsonNode root);
+    boolean supports(Map<String, Object> root);
 
     /** @param source the raw file this JSON came from; carried through so it can be stored */
-    SbomDocument parse(JsonNode root, SbomSource source);
+    SbomDocument parse(Map<String, Object> root, SbomSource source);
 }

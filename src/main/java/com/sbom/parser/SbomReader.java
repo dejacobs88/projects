@@ -1,6 +1,5 @@
 package com.sbom.parser;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.sbom.model.SbomDocument;
 import com.sbom.model.SbomSource;
 import com.sbom.util.JsonUtil;
@@ -11,6 +10,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 
 /** Turns an SBOM file into an {@link SbomDocument}, picking the right parser by sniffing the JSON. */
 @Component
@@ -31,9 +31,9 @@ public class SbomReader {
         SbomSource source = load(file);
         log.info("Read %s (sha256 %s)", file, source.sha256());
 
-        JsonNode root;
+        Map<String, Object> root;
         try {
-            root = JsonUtil.readTree(source.content());
+            root = JsonUtil.readMap(source.content());
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException(file + ": " + e.getMessage(), e);
         }
