@@ -6,16 +6,17 @@ The code is layered as **CLI (`Main`) → `SbomService` (facade) → `SbomParser
 
 ## Requirements
 
-- Java 25+ (`java -version`)
-- Maven 3.9+ (`mvn -v`)
+- Java 25+ (`java -version`, or set `JAVA_HOME`)
+
+That's it. Maven doesn't need to be installed: `./mvnw` (the Maven Wrapper) downloads the right version on first run.
 
 ## Build
 
 ```bash
-mvn package
+./mvnw package
 ```
 
-This compiles the code, runs the tests, and produces one self-contained runnable jar at `target/sbom-cli.jar`, with all dependencies bundled. Use `mvn package -DskipTests` to skip the tests. Re-run it after any code change.
+This compiles the code, runs the tests, and produces one self-contained runnable jar at `target/sbom-cli.jar`, with all dependencies bundled. Use `./mvnw package -DskipTests` to skip the tests. Re-run it after any code change.
 
 ## Usage
 

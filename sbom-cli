@@ -4,6 +4,6 @@ set -e
 DIR="$(cd "$(dirname "$0")" && pwd)"
 JAR="$DIR/target/sbom-cli.jar"
 if [ ! -f "$JAR" ]; then
-  (cd "$DIR" && mvn -q -DskipTests package)
+  (cd "$DIR" && ./mvnw -q -DskipTests package)
 fi
 exec java -jar "$JAR" "$@"
