@@ -3,12 +3,16 @@ package com.sbom.parser;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.sbom.model.Component;
 import com.sbom.model.SbomDocument;
+import com.sbom.parser.CycloneDxBom.CdxComponent;
+import com.sbom.parser.CycloneDxBom.LicenseChoice;
+import com.sbom.util.JsonUtil;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
-/** Parses CycloneDX JSON (1.4–1.6). Only the fields we query on are extracted. */
+/** Parses CycloneDX JSON (1.4–1.6): binds it to {@link CycloneDxBom}, then maps to the common model. */
 @org.springframework.stereotype.Component
 public class CycloneDxParser implements SbomParser {
 
@@ -19,53 +23,30 @@ public class CycloneDxParser implements SbomParser {
 
     @Override
     public SbomDocument parse(JsonNode root, String sourceFile) {
-        String name = text(root.path("metadata").path("component"), "name");
-        if (name == null) {
-            name = Path.of(sourceFile).getFileName().toString();
-        }
+        CycloneDxBom bom = JsonUtil.convert(root, CycloneDxBom.class);
+
+        String name = bom.metadata() != null && bom.metadata().component() != null
+                ? bom.metadata().component().name()
+                : Path.of(sourceFile).getFileName().toString();
         // serialNumber identifies a document; fall back to the file path so re-ingest stays idempotent.
-        String serial = text(root, "serialNumber");
-        if (serial == null) {
-            serial = "file:" + Path.of(sourceFile).toAbsolutePath();
-        }
+        String serial = bom.serialNumber() != null
+                ? bom.serialNumber()
+                : "file:" + Path.of(sourceFile).toAbsolutePath();
 
         List<Component> components = new ArrayList<>();
-        collect(root.path("components"), components);
+        flatten(bom.components(), components);
         return new SbomDocument(name, serial, sourceFile, components);
     }
 
-    /** Components can nest (assemblies), so walk the tree and flatten. */
-    private void collect(JsonNode nodes, List<Component> out) {
-        for (JsonNode node : nodes) {
-            out.add(new Component(
-                    text(node, "name"),
-                    text(node, "version"),
-                    text(node, "purl"),
-                    licenses(node.path("licenses"))));
-            collect(node.path("components"), out);
+    /** Nested components are flattened so every package is queryable. */
+    private void flatten(List<CdxComponent> cdxComponents, List<Component> out) {
+        for (CdxComponent c : cdxComponents) {
+            List<String> licenses = c.licenses().stream()
+                    .map(LicenseChoice::value)
+                    .filter(Objects::nonNull)
+                    .toList();
+            out.add(new Component(c.name(), c.version(), c.purl(), licenses));
+            flatten(c.components(), out);
         }
-    }
-
-    /** Each entry is either {"license": {"id"|"name": ...}} or {"expression": "..."}. */
-    private List<String> licenses(JsonNode nodes) {
-        List<String> out = new ArrayList<>();
-        for (JsonNode entry : nodes) {
-            String value = entry.has("expression")
-                    ? text(entry, "expression")
-                    : firstNonNull(text(entry.path("license"), "id"), text(entry.path("license"), "name"));
-            if (value != null) {
-                out.add(value);
-            }
-        }
-        return out;
-    }
-
-    private static String text(JsonNode node, String field) {
-        JsonNode value = node.get(field);
-        return value == null || value.isNull() ? null : value.asText();
-    }
-
-    private static String firstNonNull(String a, String b) {
-        return a != null ? a : b;
     }
 }

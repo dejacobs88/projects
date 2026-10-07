@@ -1,7 +1,6 @@
 package com.sbom;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sbom.model.Component;
 import com.sbom.model.QueryResult;
 import com.sbom.model.SbomDocument;
@@ -10,11 +9,11 @@ import com.sbom.store.ComponentEntity;
 import com.sbom.store.ComponentRepository;
 import com.sbom.store.DocumentEntity;
 import com.sbom.store.DocumentRepository;
+import com.sbom.util.JsonUtil;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -27,7 +26,6 @@ import java.util.List;
 @Service
 public class SbomService {
 
-    private static final ObjectMapper JSON = new ObjectMapper();
     private static final Sort RESULT_ORDER = Sort.by("document.name", "name", "version");
 
     private final DocumentRepository documents;
@@ -42,11 +40,11 @@ public class SbomService {
 
     /** Parses and stores an SBOM file. Re-ingesting the same document replaces it. */
     @Transactional
-    public SbomDocument ingest(Path file) throws IOException {
+    public SbomDocument ingest(Path file) {
         if (!Files.isRegularFile(file)) {
             throw new IllegalArgumentException("File not found: " + file);
         }
-        JsonNode root = JSON.readTree(file.toFile());
+        JsonNode root = JsonUtil.readTree(file);
         SbomParser parser = parsers.stream()
                 .filter(p -> p.supports(root))
                 .findFirst()
