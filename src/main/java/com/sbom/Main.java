@@ -4,6 +4,7 @@ import com.sbom.model.DocumentSummary;
 import com.sbom.model.IngestResult;
 import com.sbom.model.QueryResult;
 import com.sbom.model.SbomDocument;
+import com.sbom.util.FileUtil;
 import com.sbom.util.Logger;
 import com.sbom.util.TablePrinter;
 import org.springframework.boot.SpringApplication;
@@ -13,6 +14,7 @@ import org.springframework.context.ConfigurableApplicationContext;
 import java.nio.file.Path;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,7 +25,7 @@ public class Main {
 
     private static final String USAGE = """
             Usage:
-              sbom-cli ingest <sbom-file> [<sbom-file> ...]
+              sbom-cli ingest <file-or-directory> [...]    (directories: every .json inside, recursively)
               sbom-cli query --component <name> [--version <version>]
               sbom-cli query --license <license>
               sbom-cli list
@@ -69,10 +71,18 @@ public class Main {
         if (args.length < 2) {
             return fail(USAGE);
         }
+        List<Path> requested = Arrays.stream(args, 1, args.length).map(Path::of).toList();
+        List<Path> files = FileUtil.expandJsonFiles(requested);
+        if (files.isEmpty()) {
+            log.warn("No .json files found in %s", requested);
+            return 1;
+        }
+        log.info("Ingesting %d file(s)", files.size());
+
         int failed = 0;
-        for (int i = 1; i < args.length; i++) {
+        for (Path file : files) {
             try {
-                IngestResult result = sboms.ingest(Path.of(args[i]));
+                IngestResult result = sboms.ingest(file);
                 SbomDocument doc = result.document();
                 String verb = switch (result.outcome()) {
                     case CREATED -> "Ingested";
@@ -80,15 +90,14 @@ public class Main {
                     case UNCHANGED -> "Unchanged";
                 };
                 System.out.printf("%-9s '%s' (%d components) from %s%n",
-                        verb, doc.name(), doc.components().size(), args[i]);
+                        verb, doc.name(), doc.components().size(), file);
             } catch (Exception e) {
                 failed++;
-                log.error("Failed %s: %s", args[i], e.getMessage());
+                log.error("Failed %s: %s", file, e.getMessage());
             }
         }
-        int total = args.length - 1;
-        if (total > 1) {
-            System.out.printf("%nIngested %d of %d file(s)%n", total - failed, total);
+        if (files.size() > 1) {
+            System.out.printf("%n%d of %d file(s) succeeded%n", files.size() - failed, files.size());
         }
         return failed == 0 ? 0 : 1;
     }

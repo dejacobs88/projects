@@ -24,6 +24,7 @@ This compiles the code, runs the tests, and produces one self-contained runnable
 
 ```bash
 ./sbom-cli ingest samples/*.json                           # one or many files; bad files are reported and skipped
+./sbom-cli ingest samples/                                 # directories: every .json inside, recursively
 ./sbom-cli list                                            # every ingested SBOM with component count
 ./sbom-cli query --component log4j-core
 ./sbom-cli query --component log4j-core --version 2.14.1
