@@ -32,6 +32,7 @@ public class Main {
 
             Options:
               -v, --verbose   log progress details (to stderr)
+              -h, --help      show this help
 
             Database: ~/.sbom-cli/sbom.mv.db (override the path, without extension, with the SBOM_DB env var)""";
 
@@ -40,6 +41,11 @@ public class Main {
         List<String> argList = new ArrayList<>(List.of(rawArgs));
         boolean verbose = argList.removeIf(a -> a.equals("-v") || a.equals("--verbose"));
         String[] args = argList.toArray(String[]::new);
+        // Help is answered before Spring starts, so it's instant and needs no database.
+        if (argList.contains("-h") || argList.contains("--help") || (args.length > 0 && args[0].equals("help"))) {
+            System.out.println(USAGE);
+            System.exit(0);
+        }
         if (args.length == 0) {
             exit(USAGE);
         }

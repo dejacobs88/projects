@@ -33,6 +33,7 @@ This compiles the code, runs the tests, and produces one self-contained runnable
 
 java -jar target/sbom-cli.jar query --license MIT          # same thing, without the wrapper
 ./sbom-cli -v ingest samples/*.json                        # -v / --verbose: log progress to stderr
+./sbom-cli --help                                          # -h / --help: usage
 SBOM_DB=/tmp/other ./sbom-cli query --license MIT          # use a different database file (/tmp/other.mv.db)
 ```
 
