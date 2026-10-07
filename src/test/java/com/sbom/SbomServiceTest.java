@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 // In-memory DB; @Transactional rolls back after each test so tests stay independent.
-@SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:test")
+@SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:test;IGNORECASE=TRUE")
 @Transactional
 class SbomServiceTest {
 
@@ -69,6 +69,7 @@ class SbomServiceTest {
     void findsByLicense() {
         List<QueryResult> mit = sboms.findByLicense("MIT");
         assertEquals(3, mit.size()); // lodash, react (expression), Brotli
+        assertEquals(3, sboms.findByLicense("mit").size()); // case-insensitive
     }
 
     @Test

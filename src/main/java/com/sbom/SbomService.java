@@ -60,14 +60,14 @@ public class SbomService {
     public List<QueryResult> findByComponent(String name, String version) {
         return timed("component=" + name + (version == null ? "" : " version=" + version), () ->
                 version == null
-                        ? components.findByNameIgnoreCase(name, RESULT_ORDER)
-                        : components.findByNameIgnoreCaseAndVersion(name, version, RESULT_ORDER));
+                        ? components.findByName(name, RESULT_ORDER)
+                        : components.findByNameAndVersion(name, version, RESULT_ORDER));
     }
 
     /** Finds components carrying the given license (case-insensitive exact match). */
     @Transactional(readOnly = true)
     public List<QueryResult> findByLicense(String license) {
-        return timed("license=" + license, () -> components.findByLicensesIgnoreCase(license, RESULT_ORDER));
+        return timed("license=" + license, () -> components.findByLicense(license, RESULT_ORDER));
     }
 
     /** Lists every ingested SBOM, alphabetically by name. */
