@@ -1,8 +1,8 @@
 # sbom-cli
 
-A small Java CLI that ingests CycloneDX 1.6 JSON SBOMs into a local SQLite database (`./sbom.db`) and queries them by component name (optionally filtered by version) or by license. Names and licenses match case-insensitively. Re-ingesting the same SBOM (same `serialNumber`, or the same file path when there is none) replaces the old copy instead of duplicating it.
+A small Java CLI that ingests CycloneDX 1.6 JSON SBOMs into a local embedded H2 database (`./sbom.mv.db`) and queries them by component name (optionally filtered by version) or by license. Names and licenses match case-insensitively. Re-ingesting the same SBOM (same `serialNumber`, or the same file path when there is none) replaces the old copy instead of duplicating it.
 
-The code is layered as **CLI (`Main`) → `SbomService` (facade) → `SbomParser` + `SbomRepository`**. Parsers turn a specific format into a common `SbomDocument` model, so adding SPDX means writing one new `SbomParser`. The repository hides storage, so SQLite can be swapped for Postgres without touching the CLI. `SbomService` is the single entry point that any new feature should build on.
+The code is layered as **CLI (`Main`) → `SbomService` (facade) → `SbomParser`s + Spring Data JPA repositories**. Parsers turn a specific format into a common `SbomDocument` model, so adding SPDX means writing one new `SbomParser` bean. Persistence uses Spring Data JPA (Hibernate): the schema is generated from the entity classes, and queries are derived from repository method names (e.g. `findByNameIgnoreCaseAndVersion`), so there is no hand-written SQL. Adding a query means declaring a method on `ComponentRepository`. Moving to Postgres is a driver and URL change. `SbomService` is the single entry point that any new feature should build on.
 
 ## Requirements
 
@@ -28,7 +28,7 @@ This compiles the code, runs the tests, and produces one self-contained runnable
 ./sbom-cli query --license MIT
 
 java -jar target/sbom-cli.jar query --license MIT          # same thing, without the wrapper
-SBOM_DB=/tmp/other.db ./sbom-cli query --license MIT       # use a different database file
+SBOM_DB=/tmp/other ./sbom-cli query --license MIT          # use a different database file (/tmp/other.mv.db)
 ```
 
 Example output:

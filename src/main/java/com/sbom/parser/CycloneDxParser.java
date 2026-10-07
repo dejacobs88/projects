@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /** Parses CycloneDX JSON (1.4–1.6). Only the fields we query on are extracted. */
+@org.springframework.stereotype.Component
 public class CycloneDxParser implements SbomParser {
 
     @Override

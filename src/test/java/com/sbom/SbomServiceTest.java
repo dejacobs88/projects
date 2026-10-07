@@ -1,10 +1,11 @@
 package com.sbom;
 
 import com.sbom.model.QueryResult;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -13,24 +14,19 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+// In-memory DB; @Transactional rolls back after each test so tests stay independent.
+@SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:test")
+@Transactional
 class SbomServiceTest {
 
-    @TempDir
-    Path tmp;
-
+    @Autowired
     private SbomService sboms;
 
     @BeforeEach
     void setUp() throws Exception {
-        sboms = SbomService.open(tmp.resolve("test.db").toString());
         sboms.ingest(Path.of("samples/payments-service.cdx.json"));
         sboms.ingest(Path.of("samples/web-frontend.cdx.json"));
         sboms.ingest(Path.of("samples/cyclone1_6.json"));
-    }
-
-    @AfterEach
-    void tearDown() {
-        sboms.close();
     }
 
     @Test

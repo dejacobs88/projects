@@ -3,12 +3,17 @@ package com.sbom;
 import com.sbom.model.QueryResult;
 import com.sbom.model.SbomDocument;
 
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.ConfigurableApplicationContext;
+
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/** CLI layer: parse args, call SbomService, print results. No business logic lives here. */
+/** CLI layer: start Spring, parse args, call SbomService, print results. No business logic lives here. */
+@SpringBootApplication
 public class Main {
 
     private static final String USAGE = """
@@ -17,14 +22,15 @@ public class Main {
               sbom-cli query --component <name> [--version <version>]
               sbom-cli query --license <license>
 
-            Database: ./sbom.db (override with SBOM_DB env var)""";
+            Database: ./sbom.mv.db (override the path, without extension, with the SBOM_DB env var)""";
 
     public static void main(String[] args) {
         if (args.length == 0) {
             exit(USAGE);
         }
-        String dbPath = System.getenv().getOrDefault("SBOM_DB", "sbom.db");
-        try (SbomService sboms = SbomService.open(dbPath)) {
+        // CLI args are ours, not Spring's, so don't pass them to SpringApplication.
+        try (ConfigurableApplicationContext spring = SpringApplication.run(Main.class)) {
+            SbomService sboms = spring.getBean(SbomService.class);
             switch (args[0]) {
                 case "ingest" -> ingest(sboms, args);
                 case "query" -> query(sboms, args);
