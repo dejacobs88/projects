@@ -1,5 +1,7 @@
 package com.sbom.store;
 
+import com.sbom.model.Component;
+import com.sbom.model.QueryResult;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
@@ -52,6 +54,16 @@ public class ComponentEntity {
         this.version = version;
         this.purl = purl;
         this.licenses = new ArrayList<>(licenses);
+    }
+
+    public static ComponentEntity from(Component c) {
+        return new ComponentEntity(c.name(), c.version(), c.purl(), c.licenses());
+    }
+
+    /** Flattens this component (and its document) into a query result row. */
+    public QueryResult toResult() {
+        return new QueryResult(document.getName(), name, version,
+                licenses.isEmpty() ? null : String.join(", ", licenses));
     }
 
     void setDocument(DocumentEntity document) { this.document = document; }

@@ -5,7 +5,7 @@ import com.sbom.model.SbomDocument;
 
 /**
  * Converts one SBOM format into the common {@link SbomDocument} model.
- * To support a new format (e.g. SPDX), implement this as a Spring @Component; SbomService picks it up automatically.
+ * To support a new format (e.g. SPDX), implement this as a Spring @Component; SbomReader picks it up automatically.
  */
 public interface SbomParser {
 

@@ -8,6 +8,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 
+import com.sbom.model.SbomDocument;
+
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -43,6 +45,16 @@ public class DocumentEntity {
         this.serialNumber = serialNumber;
         this.sourceFile = sourceFile;
         this.ingestedAt = Instant.now();
+    }
+
+    /** Maps the parsed, format-agnostic document onto entities ready to save. */
+    public static DocumentEntity from(SbomDocument doc) {
+        DocumentEntity entity = new DocumentEntity(doc.name(), doc.serialNumber(), doc.sourceFile());
+        doc.components().stream()
+                .filter(c -> c.name() != null)
+                .map(ComponentEntity::from)
+                .forEach(entity::addComponent);
+        return entity;
     }
 
     public void addComponent(ComponentEntity component) {
