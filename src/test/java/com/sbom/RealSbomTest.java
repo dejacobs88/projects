@@ -36,6 +36,7 @@ class RealSbomTest {
         assertEquals(List.of("legacy-service", "sbom-cli"), docs.stream().map(d -> d.name()).toList());
         assertEquals(73, docs.get(0).componentCount());
         assertEquals(58, docs.get(1).componentCount());
+        assertEquals("build", docs.get(0).lifecycle()); // CycloneDX metadata.lifecycles[].phase
     }
 
     @Test

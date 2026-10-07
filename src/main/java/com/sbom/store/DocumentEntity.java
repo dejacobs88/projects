@@ -37,6 +37,9 @@ public class DocumentEntity {
 
     private String sourceFile;
 
+    /** SBOM type / lifecycle stage (e.g. "build"); null if not declared. */
+    private String lifecycle;
+
     /** SHA-256 of the raw content: detects byte-identical re-ingests. */
     @Column(length = 64)
     private String sha256;
@@ -61,6 +64,7 @@ public class DocumentEntity {
         entity.name = doc.name();
         entity.serialNumber = doc.serialNumber();
         entity.sourceFile = doc.source().path();
+        entity.lifecycle = doc.lifecycle();
         entity.sha256 = doc.source().sha256();
         entity.rawJson = doc.source().content();
         entity.ingestedAt = Instant.now();
@@ -69,7 +73,7 @@ public class DocumentEntity {
     }
 
     public DocumentSummary toSummary() {
-        return new DocumentSummary(name, serialNumber, sourceFile, sha256, components.size(), ingestedAt);
+        return new DocumentSummary(name, serialNumber, lifecycle, sourceFile, sha256, components.size(), ingestedAt);
     }
 
     public void addComponent(ComponentEntity component) {
@@ -81,6 +85,7 @@ public class DocumentEntity {
     public String getName() { return name; }
     public String getSerialNumber() { return serialNumber; }
     public String getSourceFile() { return sourceFile; }
+    public String getLifecycle() { return lifecycle; }
     public String getSha256() { return sha256; }
     public String getRawJson() { return rawJson; }
     public Instant getIngestedAt() { return ingestedAt; }

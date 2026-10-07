@@ -49,10 +49,17 @@ public class CycloneDxParser implements SbomParser {
             log.info("No serialNumber; identifying document by file path");
         }
 
+        // The SBOM "type" (CISA: design/source/build/analyzed/deployed/runtime); null when not declared.
+        String lifecycle = bom.metadata() == null ? null : bom.metadata().lifecycles().stream()
+                .map(CycloneDxBom.Lifecycle::value)
+                .filter(Objects::nonNull)
+                .reduce((a, b) -> a + "," + b)
+                .orElse(null);
+
         List<Component> components = new ArrayList<>();
         flatten(bom.components(), components);
-        log.info("Parsed '%s': %d component(s)", name, components.size());
-        return new SbomDocument(name, serial, source, components);
+        log.info("Parsed '%s': %d component(s), lifecycle %s", name, components.size(), lifecycle);
+        return new SbomDocument(name, serial, lifecycle, source, components);
     }
 
     /** Nested components are flattened so every package is queryable. */

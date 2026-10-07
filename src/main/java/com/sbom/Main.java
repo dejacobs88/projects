@@ -142,9 +142,9 @@ public class Main {
 
     private static int list(SbomService sboms) {
         List<DocumentSummary> docs = sboms.listDocuments();
-        printTable(List.of("DOCUMENT", "COMPONENTS", "SHA256", "INGESTED", "SOURCE"),
+        printTable(List.of("DOCUMENT", "TYPE", "COMPONENTS", "SHA256", "INGESTED", "SOURCE"),
                 docs.stream()
-                        .map(d -> List.of(d.name(), String.valueOf(d.componentCount()),
+                        .map(d -> List.of(d.name(), str(d.lifecycle()), String.valueOf(d.componentCount()),
                                 d.sha256() == null ? "-" : d.sha256().substring(0, 12),
                                 str(d.ingestedAt().truncatedTo(ChronoUnit.SECONDS)), str(d.sourceFile())))
                         .toList(),

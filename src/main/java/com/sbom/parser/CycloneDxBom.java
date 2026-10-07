@@ -12,7 +12,19 @@ public record CycloneDxBom(String bomFormat, String serialNumber, Metadata metad
         components = components == null ? List.of() : components;
     }
 
-    public record Metadata(CdxComponent component) {}
+    /** lifecycles (CycloneDX 1.5+) says which stage the SBOM describes: design, pre-build, build, post-build, operations, ... */
+    public record Metadata(CdxComponent component, List<Lifecycle> lifecycles) {
+        public Metadata {
+            lifecycles = lifecycles == null ? List.of() : lifecycles;
+        }
+    }
+
+    /** Either a standard {"phase": "build"} or a custom {"name": "..."}. */
+    public record Lifecycle(String phase, String name) {
+        public String value() {
+            return phase != null ? phase : name;
+        }
+    }
 
     /** Components can nest (e.g. a framework bundling its own libraries). */
     public record CdxComponent(String name, String version, String purl,
