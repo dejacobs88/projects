@@ -31,7 +31,7 @@ public class Main {
             Options:
               -v, --verbose   log progress details (to stderr)
 
-            Database: ./sbom.mv.db (override the path, without extension, with the SBOM_DB env var)""";
+            Database: ~/.sbom-cli/sbom.mv.db (override the path, without extension, with the SBOM_DB env var)""";
 
     public static void main(String[] rawArgs) {
         // -v / --verbose may appear anywhere; strip it, then hand it to Spring as a property.
