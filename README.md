@@ -2,7 +2,7 @@
 
 A small Java CLI that ingests CycloneDX 1.6 JSON SBOMs into a local embedded H2 database stored per user at `~/.sbom-cli/sbom.mv.db`, so every command sees the same data regardless of the current directory and queries them by component name (optionally filtered by version) or by license. Names and licenses match case-insensitively. Each document's original JSON is stored verbatim along with its SHA-256. The raw document is the source of truth, and the component tables are a query index built from it. Re-ingesting the same SBOM (same `serialNumber`, or the same file path when there is none) replaces the old copy if its content changed, and is skipped if it's byte-identical.
 
-The code is layered as **CLI (`Main`) → `SbomService` (facade) → `SbomParser`s + Spring Data JPA repositories**. Parsers turn a specific format into a common `SbomDocument` model, so adding SPDX means writing one new `SbomParser` bean. Persistence uses Spring Data JPA (Hibernate): the schema is generated from the entity classes, and queries are derived from repository method names (e.g. `findByNameIgnoreCaseAndVersion`), so there is no hand-written SQL. Adding a query means declaring a method on `ComponentRepository`. Moving to Postgres is a driver and URL change. `SbomService` is the single entry point that any new feature should build on.
+The code is layered as **CLI (`Main`) → `SbomService` (facade) → `SbomParser`s + Spring Data JPA repositories**. Parsers turn a specific format into a common `SbomDocument` model, so adding SPDX means writing one new `SbomParser` bean. Persistence uses Spring Data JPA (Hibernate): the schema is generated from the entity classes, and queries are derived from repository method names (e.g. `findByNameAndVersion`), so there is no hand-written SQL. Adding a query means declaring a method on `ComponentRepository`. Moving to Postgres is a driver and URL change. `SbomService` is the single entry point that any new feature should build on.
 
 ## Requirements
 
@@ -29,6 +29,7 @@ This compiles the code, runs the tests, and produces one self-contained runnable
 ./sbom-cli query --component log4j-core
 ./sbom-cli query --component log4j-core --version 2.14.1
 ./sbom-cli query --license MIT
+./sbom-cli query -c log4j-core --version 2.14.1            # short forms: -c = --component, -l = --license
 
 java -jar target/sbom-cli.jar query --license MIT          # same thing, without the wrapper
 ./sbom-cli -v ingest samples/*.json                        # -v / --verbose: log progress to stderr

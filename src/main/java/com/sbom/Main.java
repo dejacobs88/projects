@@ -26,8 +26,8 @@ public class Main {
     private static final String USAGE = """
             Usage:
               sbom-cli ingest <file-or-directory> [...]    (directories: every .json inside, recursively)
-              sbom-cli query --component <name> [--version <version>]
-              sbom-cli query --license <license>
+              sbom-cli query -c|--component <name> [--version <version>]
+              sbom-cli query -l|--license <license>
               sbom-cli list
 
             Options:
@@ -135,14 +135,20 @@ public class Main {
         return 0;
     }
 
-    /** Parses "--key value" pairs after the subcommand. */
+    /** Short flags and the long flag each one stands for. (-v is taken by --verbose.) */
+    private static final Map<String, String> SHORT_FLAGS = Map.of(
+            "-c", "--component",
+            "-l", "--license");
+
+    /** Parses "--key value" (or "-k value") pairs after the subcommand; short flags are stored under their long name. */
     private static Map<String, String> parseFlags(String[] args) {
         Map<String, String> flags = new HashMap<>();
         for (int i = 1; i < args.length; i += 2) {
-            if (!args[i].startsWith("--") || i + 1 >= args.length) {
+            String flag = SHORT_FLAGS.getOrDefault(args[i], args[i]);
+            if (!flag.startsWith("--") || i + 1 >= args.length) {
                 System.exit(fail("Invalid arguments.\n\n" + USAGE));
             }
-            flags.put(args[i], args[i + 1]);
+            flags.put(flag, args[i + 1]);
         }
         return flags;
     }
