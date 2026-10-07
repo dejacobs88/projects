@@ -1,8 +1,10 @@
 package com.sbom;
 
 import com.sbom.model.DocumentSummary;
+import com.sbom.model.IngestResult;
 import com.sbom.model.QueryResult;
 import com.sbom.model.SbomDocument;
+import com.sbom.util.Logger;
 import com.sbom.util.TablePrinter;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -10,6 +12,7 @@ import org.springframework.context.ConfigurableApplicationContext;
 
 import java.nio.file.Path;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,42 +28,62 @@ public class Main {
               sbom-cli query --license <license>
               sbom-cli list
 
+            Options:
+              -v, --verbose   log progress details (to stderr)
+
             Database: ./sbom.mv.db (override the path, without extension, with the SBOM_DB env var)""";
 
-    public static void main(String[] args) {
+    public static void main(String[] rawArgs) {
+        // -v / --verbose may appear anywhere; strip it, then hand it to Spring as a property.
+        List<String> argList = new ArrayList<>(List.of(rawArgs));
+        boolean verbose = argList.removeIf(a -> a.equals("-v") || a.equals("--verbose"));
+        String[] args = argList.toArray(String[]::new);
         if (args.length == 0) {
             exit(USAGE);
         }
+        SpringApplication app = new SpringApplication(Main.class);
+        app.setDefaultProperties(Map.of("sbom.verbose", String.valueOf(verbose)));
+
         int status;
-        // CLI args are ours, not Spring's, so don't pass them to SpringApplication.
-        try (ConfigurableApplicationContext spring = SpringApplication.run(Main.class)) {
+        // CLI args are ours, not Spring's, so don't pass them to app.run().
+        try (ConfigurableApplicationContext spring = app.run()) {
             SbomService sboms = spring.getBean(SbomService.class);
+            Logger log = spring.getBean(Logger.class);
             status = switch (args[0]) {
-                case "ingest" -> ingest(sboms, args);
+                case "ingest" -> ingest(sboms, log, args);
                 case "query" -> query(sboms, args);
                 case "list" -> list(sboms);
                 default -> fail("Unknown command: " + args[0] + "\n\n" + USAGE);
             };
         } catch (Exception e) {
+            if (verbose) {
+                e.printStackTrace();
+            }
             status = fail("Error: " + e.getMessage());
         }
         System.exit(status);
     }
 
     /** Ingests each file independently: one bad file is reported and skipped, the rest still load. */
-    private static int ingest(SbomService sboms, String[] args) {
+    private static int ingest(SbomService sboms, Logger log, String[] args) {
         if (args.length < 2) {
             return fail(USAGE);
         }
         int failed = 0;
         for (int i = 1; i < args.length; i++) {
             try {
-                SbomDocument doc = sboms.ingest(Path.of(args[i]));
-                System.out.printf("Ingested '%s' (%d components) from %s%n",
-                        doc.name(), doc.components().size(), args[i]);
+                IngestResult result = sboms.ingest(Path.of(args[i]));
+                SbomDocument doc = result.document();
+                String verb = switch (result.outcome()) {
+                    case CREATED -> "Ingested";
+                    case REPLACED -> "Replaced";
+                    case UNCHANGED -> "Unchanged";
+                };
+                System.out.printf("%-9s '%s' (%d components) from %s%n",
+                        verb, doc.name(), doc.components().size(), args[i]);
             } catch (Exception e) {
                 failed++;
-                System.err.printf("Failed %s: %s%n", args[i], e.getMessage());
+                log.error("Failed %s: %s", args[i], e.getMessage());
             }
         }
         int total = args.length - 1;
@@ -93,9 +116,10 @@ public class Main {
 
     private static int list(SbomService sboms) {
         List<DocumentSummary> docs = sboms.listDocuments();
-        printTable(List.of("DOCUMENT", "COMPONENTS", "INGESTED", "SOURCE"),
+        printTable(List.of("DOCUMENT", "COMPONENTS", "SHA256", "INGESTED", "SOURCE"),
                 docs.stream()
                         .map(d -> List.of(d.name(), String.valueOf(d.componentCount()),
+                                d.sha256() == null ? "-" : d.sha256().substring(0, 12),
                                 str(d.ingestedAt().truncatedTo(ChronoUnit.SECONDS)), str(d.sourceFile())))
                         .toList(),
                 "document(s)");

@@ -1,13 +1,17 @@
 package com.sbom;
 
 import com.sbom.model.DocumentSummary;
+import com.sbom.model.IngestResult.Outcome;
 import com.sbom.model.QueryResult;
+import com.sbom.store.DocumentRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
@@ -20,8 +24,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Transactional
 class SbomServiceTest {
 
+    private static final Path PAYMENTS = Path.of("samples/payments-service.cdx.json");
+
     @Autowired
     private SbomService sboms;
+
+    @Autowired
+    private DocumentRepository documents;
+
+    @TempDir
+    Path tmp;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -90,5 +102,28 @@ class SbomServiceTest {
         assertEquals(List.of("cyclone1_6.json", "payments-service", "web-frontend"),
                 docs.stream().map(DocumentSummary::name).toList());
         assertEquals(5, docs.get(1).componentCount()); // includes the nested snakeyaml
+    }
+
+    @Test
+    void storesRawJsonAndHash() throws Exception {
+        var doc = documents.findBySerialNumber("urn:uuid:3e671687-395b-41f5-a30f-a58921a69b79").orElseThrow();
+        assertEquals(Files.readString(PAYMENTS), doc.getRawJson());
+        assertEquals(64, doc.getSha256().length());
+    }
+
+    @Test
+    void identicalReIngestIsUnchanged() {
+        assertEquals(Outcome.UNCHANGED, sboms.ingest(PAYMENTS).outcome());
+    }
+
+    @Test
+    void changedContentReplacesDocument() throws Exception {
+        Path edited = tmp.resolve("payments-v2.json");
+        Files.writeString(edited, Files.readString(PAYMENTS).replace("2.14.1", "2.17.2"));
+
+        assertEquals(Outcome.REPLACED, sboms.ingest(edited).outcome());
+        assertTrue(sboms.findByComponent("log4j-core", "2.14.1").isEmpty());
+        assertEquals(1, sboms.findByComponent("log4j-core", "2.17.2").size());
+        assertEquals(3, sboms.listDocuments().size());
     }
 }

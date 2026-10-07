@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 /**
@@ -22,14 +23,20 @@ public final class JsonUtil {
     private JsonUtil() {
     }
 
-    /** Reads a file as a generic JSON tree (useful for sniffing the format before binding). */
-    public static JsonNode readTree(Path file) {
+    /** Parses a JSON string into a generic tree (useful for sniffing the format before binding). */
+    public static JsonNode readTree(String json) {
         try {
-            return MAPPER.readTree(file.toFile());
+            return MAPPER.readTree(json);
         } catch (JsonProcessingException e) {
             int line = e.getLocation() == null ? -1 : e.getLocation().getLineNr();
-            throw new IllegalArgumentException(
-                    "Invalid JSON in " + file + " (line " + line + "): " + e.getOriginalMessage(), e);
+            throw new IllegalArgumentException("Invalid JSON (line " + line + "): " + e.getOriginalMessage(), e);
+        }
+    }
+
+    /** Reads a file into a generic JSON tree. */
+    public static JsonNode readTree(Path file) {
+        try {
+            return readTree(Files.readString(file));
         } catch (IOException e) {
             throw new IllegalArgumentException("Could not read " + file + ": " + e.getMessage(), e);
         }

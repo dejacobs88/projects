@@ -9,6 +9,10 @@ public interface DocumentRepository extends JpaRepository<DocumentEntity, Long> 
 
     Optional<DocumentEntity> findBySerialNumber(String serialNumber);
 
+    boolean existsBySerialNumber(String serialNumber);
+
+    boolean existsBySerialNumberAndSha256(String serialNumber, String sha256);
+
     /** Saves the document, replacing any existing one with the same serial number (call inside a transaction). */
     default DocumentEntity replace(DocumentEntity document) {
         findBySerialNumber(document.getSerialNumber()).ifPresent(existing -> {

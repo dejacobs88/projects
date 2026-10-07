@@ -2,6 +2,7 @@ package com.sbom.parser;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.sbom.model.SbomDocument;
+import com.sbom.model.SbomSource;
 
 /**
  * Converts one SBOM format into the common {@link SbomDocument} model.
@@ -12,5 +13,6 @@ public interface SbomParser {
     /** True if this parser understands the given JSON (e.g. bomFormat == "CycloneDX"). */
     boolean supports(JsonNode root);
 
-    SbomDocument parse(JsonNode root, String sourceFile);
+    /** @param source the raw file this JSON came from; carried through so it can be stored */
+    SbomDocument parse(JsonNode root, SbomSource source);
 }
